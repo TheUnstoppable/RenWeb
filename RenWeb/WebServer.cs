@@ -98,61 +98,68 @@ namespace RenWeb
             string mime = null;
             try
             {
-                //Getting context.
-                context = listener.GetContext();
-                context.Response.StatusCode = (int)HttpStatusCode.OK;
-                try
+                while (listener.IsListening)
                 {
-                    string Path = Main.RootHTTPFolder + "\\" + GetPhysicalPath(context.Request.Url);
-                    int Exist = FileExists(Path);
-                    if (Exist == 0)
+                    //Getting context.
+                    context = listener.GetContext();
+                    context.Response.StatusCode = (int)HttpStatusCode.OK;
+                    try
                     {
-                        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    }
-                    else if (Exist == 1)
-                    {
-                        Path += "\\" + Main.IndexFile;
-                    }
-                    //Response parameters.
-                    if(context.Response.StatusCode == 200)
-                    {
-                        mime = GetMimeType(System.IO.Path.GetExtension(Path));
-                        if (mime == "text/html")
+                        string Path = Main.RootHTTPFolder + "\\" + GetPhysicalPath(context.Request.Url);
+                        int Exist = FileExists(Path);
+                        if (Exist == 0)
                         {
-                            Stream = Encoding.UTF8.GetBytes(ProcessHTML(File.ReadAllText(Path)));
-                        }
-                        else if (mime != null)
-                        {
-                            Stream = File.ReadAllBytes(Path);
-                        }
-                        else
-                        {
-                            mime = "text/html";
                             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (context != null)
-                    {
-                        Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
-                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    }
-                }
-
-
-                if (context.Response.StatusCode != 200)
-                {
-                    string ErrorFile = Main.RootHTTPFolder + "\\" + GetHtmlErrorPage(context.Response.StatusCode);
-                    if (ErrorFile != null)
-                    {
-                        int Exist = FileExists(ErrorFile);
-                        if (Exist == 2)
+                        else if (Exist == 1)
                         {
-                            if (File.Exists(ErrorFile))
+                            Path += "\\" + Main.IndexFile;
+                        }
+                        //Response parameters.
+                        if (context.Response.StatusCode == 200)
+                        {
+                            mime = GetMimeType(System.IO.Path.GetExtension(Path));
+                            if (mime == "text/html")
                             {
-                                Stream = File.ReadAllBytes(ErrorFile);
+                                Stream = Encoding.UTF8.GetBytes(ProcessHTML(File.ReadAllText(Path)));
+                            }
+                            else if (mime != null)
+                            {
+                                Stream = File.ReadAllBytes(Path);
+                            }
+                            else
+                            {
+                                mime = "text/html";
+                                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (context != null)
+                        {
+                            Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
+                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                        }
+                    }
+
+
+                    if (context.Response.StatusCode != 200)
+                    {
+                        string ErrorFile = Main.RootHTTPFolder + "\\" + GetHtmlErrorPage(context.Response.StatusCode);
+                        if (ErrorFile != null)
+                        {
+                            int Exist = FileExists(ErrorFile);
+                            if (Exist == 2)
+                            {
+                                if (File.Exists(ErrorFile))
+                                {
+                                    Stream = File.ReadAllBytes(ErrorFile);
+                                }
+                                else
+                                {
+                                    Stream = null;
+                                }
                             }
                             else
                             {
@@ -164,26 +171,22 @@ namespace RenWeb
                             Stream = null;
                         }
                     }
-                    else
+
+                    context.Response.ContentType = mime;
+                    context.Response.ContentEncoding = Encoding.UTF8;
+                    context.Response.AppendHeader("RenWeb-Version", "1.0");
+
+                    //Content.
+                    if (Stream != null)
                     {
-                        Stream = null;
+                        Stream s = context.Response.OutputStream;
+                        s.Write(Stream, 0, Stream.Length);
+                        s.Close();
                     }
+
+                    //Closing connection.
+                    context.Response.Close();
                 }
-
-                context.Response.ContentType = mime;
-                context.Response.ContentEncoding = Encoding.UTF8;
-                context.Response.AppendHeader("RenWeb-Version", "1.0");
-
-                //Content.
-                if (Stream != null)
-                {
-                    Stream s = context.Response.OutputStream;
-                    s.Write(Stream, 0, Stream.Length);
-                    s.Close();
-                }
-
-                //Closing connection.
-                context.Response.Close();
 
             }
             catch(ObjectDisposedException)
@@ -199,13 +202,6 @@ namespace RenWeb
                 }
                 else
                     Engine.ConsoleOutput($"[RenWeb] Failed to send website to a unknown client. {ex.ToString()} - {ex.Message}\n");
-            }
-            finally
-            {
-                if (listener.IsListening)
-                {
-                    RequestHandler();
-                }
             }
         }
 
