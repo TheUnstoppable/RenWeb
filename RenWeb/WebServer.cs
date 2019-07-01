@@ -186,6 +186,7 @@ namespace RenWeb
 
                     //Closing connection.
                     context.Response.Close();
+                    Thread.Sleep(50); //Wait 50 milliseconds to let app pee ;p
                 }
 
             }
