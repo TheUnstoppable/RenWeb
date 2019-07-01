@@ -116,11 +116,13 @@ namespace RenWeb
                     ServerDefinitions.CurrentMap = Engine.TheCncGame.MapName;
 
                     //Next Map
-                    var GameDefinitions = (IDictionary<string, IGameDefinition>)Engine.GetGameDefinitions().UnmanagedObject;
-                    string MapDef = Engine.GetMap(Engine.GetCurrentMapIndex() + (Engine.TheGame.IsIntermission ? 0 : 1));
-                    if (String.IsNullOrEmpty(MapDef))
-                        MapDef = Engine.GetMap(0);
-                    ServerDefinitions.NextMap = GameDefinitions.First(x => x.Value.DisplayName == MapDef).Value.MapName;
+                    using (var GameDefinitions = Engine.GetGameDefinitions())
+                    {
+                        string MapDef = Engine.GetMap(Engine.GetCurrentMapIndex() + (Engine.TheGame.IsIntermission ? 0 : 1));
+                        if (String.IsNullOrEmpty(MapDef))
+                            MapDef = Engine.GetMap(0);
+                        ServerDefinitions.NextMap = GameDefinitions.UnmanagedObject.First(x => x.Value.DisplayName == MapDef).Value.MapName;
+                    }
 
                     //Server Name
                     ServerDefinitions.ServerName = Engine.TheCncGame.GameTitle;
