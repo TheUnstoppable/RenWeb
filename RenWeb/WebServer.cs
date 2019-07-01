@@ -27,7 +27,9 @@ namespace RenWeb
             handlers = new System.Collections.Generic.List<Thread>();
             for (int count = 0; count < Main.MaxPendingConnections; count++)
             {
-                listener.BeginGetContext(RequestHandler, "RenWeb");
+                Thread tr = new Thread(RequestHandler);
+                handlers.Add(tr);
+                tr.Start();
             }
             Engine.ConsoleOutput($"[RenWeb] The RenWeb Server is now listening port {Main.Port}.\n");
         }
@@ -89,7 +91,7 @@ namespace RenWeb
             }
         }
 
-        private void RequestHandler(IAsyncResult result)
+        private void RequestHandler()
         {
             HttpListenerContext context = null;
             byte[] Stream = new byte[4];
@@ -97,7 +99,7 @@ namespace RenWeb
             try
             {
                 //Getting context.
-                context = listener.EndGetContext(result);
+                context = listener.GetContext();
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 try
                 {
@@ -202,7 +204,7 @@ namespace RenWeb
             {
                 if (listener.IsListening)
                 {
-                    listener.BeginGetContext(RequestHandler, "RenWeb");
+                    RequestHandler();
                 }
             }
         }
@@ -210,67 +212,51 @@ namespace RenWeb
         public string ProcessHTML(string Text)
         {
             string HTML = Text;
-            //Server Name
+            //Version
             HTML = HTML.Replace("$RenWebHTML_Version", Main.Version);
 
             //Server Name
-            HTML = HTML.Replace("$RenWebHTML_ServerName", Engine.TheCncGame.GameTitle);
+            HTML = HTML.Replace("$RenWebHTML_ServerName", ServerDefinitions.ServerName);
 
             //Current Map
-            HTML = HTML.Replace("$RenWebHTML_CurrentMap", Engine.TheCncGame.MapName);
+            HTML = HTML.Replace("$RenWebHTML_CurrentMap", ServerDefinitions.CurrentMap);
 
             //Next Map
-            var GameDefinitions = (IDictionary<string, IGameDefinition>)Engine.GetGameDefinitions().UnmanagedObject;
-            string MapDef = Engine.GetMap(Engine.GetCurrentMapIndex() + (Engine.TheGame.IsIntermission ? 0 : 1));
-            HTML = HTML.Replace("$RenWebHTML_NextMap", GameDefinitions.First(x => x.Value.DisplayName == MapDef).Value.MapName);
+            HTML = HTML.Replace("$RenWebHTML_NextMap", ServerDefinitions.NextMap);
 
             //Time Left as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeLeftF", Main.FormatTime(TimeSpan.FromSeconds(Convert.ToInt32(Engine.TheGame.TimeRemainingSeconds))));
+            HTML = HTML.Replace("$RenWebHTML_TimeLeftF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeLeft)));
 
             //Time Left as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeLeft", Convert.ToInt32(Engine.TheGame.TimeRemainingSeconds).ToString());
+            HTML = HTML.Replace("$RenWebHTML_TimeLeft", ServerDefinitions.TimeLeft.ToString());
 
             //Time Elapsed as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeElapsedF", Main.FormatTime(TimeSpan.FromSeconds(Convert.ToInt32(Engine.TheGame.GameDurationSeconds))));
+            HTML = HTML.Replace("$RenWebHTML_TimeElapsedF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeElapsed)));
 
             //Time Elapsed as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeElapsed", Convert.ToInt32(Engine.TheGame.GameDurationSeconds).ToString());
+            HTML = HTML.Replace("$RenWebHTML_TimeElapsed", (ServerDefinitions.TimeElapsed).ToString());
 
             //Time Limit as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeLimitF", Main.FormatTime(TimeSpan.FromMinutes(Convert.ToInt32(Engine.TheGame.TimeLimitMinutes))));
+            HTML = HTML.Replace("$RenWebHTML_TimeLimitF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeTotal)));
 
             //Time Limit as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeLimit", Convert.ToInt32(Engine.TheGame.TimeLimitMinutes * 60).ToString());
+            HTML = HTML.Replace("$RenWebHTML_TimeLimit", (ServerDefinitions.TimeTotal * 60).ToString());
 
             //Long Gamemode Name
-            HTML = HTML.Replace("$RenWebHTML_GameMode", DAGameManager.GameModeLongName);
+            HTML = HTML.Replace("$RenWebHTML_GameMode", ServerDefinitions.GameMode);
 
             //Short Gamemode Name
-            HTML = HTML.Replace("$RenWebHTML_SGameMode", DAGameManager.GameModeShortName);
+            HTML = HTML.Replace("$RenWebHTML_SGameMode", ServerDefinitions.ShortGameMode);
 
             //Player Count
-            HTML = HTML.Replace("$RenWebHTML_CurrentPlayerCount", Engine.TheGame.CurrentPlayers.ToString());
+            HTML = HTML.Replace("$RenWebHTML_CurrentPlayerCount", ServerDefinitions.PlayerCount.ToString());
 
             //Max Player Count
-            HTML = HTML.Replace("$RenWebHTML_MaxPlayerCount", Engine.TheGame.MaxPlayers.ToString());
+            HTML = HTML.Replace("$RenWebHTML_MaxPlayerCount", ServerDefinitions.MaxPlayerCount.ToString());
 
             //Players :O
-            string PlayersText = "";
-            if ((Engine.GetPlayerList() as ICollection<IcPlayer>).Count > 0)
-            {
-                foreach (IcPlayer Player in Engine.GetPlayerList())
-                {
-                    if (Player.IsActive)
-                    {
-                        PlayersText += $"{Player.PlayerName},{Engine.GetTeamName(Player.PlayerType)},{Convert.ToInt32(Player.Score)},{Player.Kills},{Player.Deaths},{Player.Ping},{Main.FormatTime(TimeSpan.FromSeconds(Player.GameTime))},";
-                    }
-                }
-                if (!String.IsNullOrEmpty(PlayersText))
-                {
-                    PlayersText = PlayersText.Substring(0, PlayersText.Length - 1);
-                }
-            }
-            HTML = HTML.Replace("$RenWebHTML_Players", PlayersText);
+            HTML = HTML.Replace("$RenWebHTML_Players", ServerDefinitions.Players);
+
             //Finally -_-
             return HTML;
         }
