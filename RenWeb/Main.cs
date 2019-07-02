@@ -8,6 +8,14 @@ using System.Threading.Tasks;
 
 namespace RenWeb
 {
+    public enum LogSeverity
+    {
+        Info = 0,
+        Warning = 1,
+        Error = 2,
+        Connection = 3
+    }
+
     public class TeamClass
     {
         private string tName = "Unknown";
@@ -157,7 +165,10 @@ namespace RenWeb
                     lock (LockObject)
                     {
                         //Current Map
-                        ServerDefinitions.CurrentMap = Engine.TheCncGame.MapName;
+                        if (Engine.TheCncGame.MapName != null)
+                            ServerDefinitions.CurrentMap = Engine.TheCncGame.MapName;
+                        else
+                            ServerDefinitions.CurrentMap = "Unknown";
 
                         //Next Map
                         using (var GameDefinitions = Engine.GetGameDefinitions())
@@ -169,7 +180,10 @@ namespace RenWeb
                         }
 
                         //Server Name
-                        ServerDefinitions.ServerName = Engine.TheCncGame.GameTitle;
+                        if (Engine.TheCncGame.GameTitle != null)
+                            ServerDefinitions.ServerName = Engine.TheCncGame.GameTitle;
+                        else
+                            ServerDefinitions.ServerName = "Unknown";
 
                         //Time Left
                         ServerDefinitions.TimeLeft = Convert.ToInt32(Engine.TheGame.TimeRemainingSeconds);
@@ -181,10 +195,16 @@ namespace RenWeb
                         ServerDefinitions.TimeTotal = Convert.ToInt32(Engine.TheGame.TimeLimitMinutes * 60);
 
                         //Game Mode
-                        ServerDefinitions.GameMode = DAGameManager.GameModeLongName;
+                        if (DAGameManager.GameModeLongName != null)
+                            ServerDefinitions.GameMode = DAGameManager.GameModeLongName;
+                        else
+                            ServerDefinitions.GameMode = "Unknown";
 
                         //Short Game Mode
-                        ServerDefinitions.ShortGameMode = DAGameManager.GameModeShortName;
+                        if (DAGameManager.GameModeShortName != null)
+                            ServerDefinitions.ShortGameMode = DAGameManager.GameModeShortName;
+                        else
+                            ServerDefinitions.ShortGameMode = "Unknown";
 
                         //Players
                         ServerDefinitions.PlayerCount = Engine.TheGame.CurrentPlayers;
@@ -194,51 +214,67 @@ namespace RenWeb
 
                         //Players
                         string PlayersText = "";
-                        if ((Engine.GetPlayerList() as ICollection<IcPlayer>).Count > 0)
+                        if (Engine.GetPlayerList() != null)
                         {
-                            foreach (IcPlayer Player in Engine.GetPlayerList())
+                            if ((Engine.GetPlayerList() as ICollection<IcPlayer>).Count > 0)
                             {
-                                if (Player.IsActive)
+
+                                foreach (IcPlayer Player in Engine.GetPlayerList())
                                 {
-                                    PlayersText += $"{Player.PlayerName},{Engine.GetTeamName(Player.PlayerType)},{Convert.ToInt32(Player.Score)},{Player.Kills},{Player.Deaths},{Player.Ping},{Main.FormatTime(TimeSpan.FromSeconds(Player.GameTime))},";
+                                    if (Player.IsActive)
+                                    {
+                                        PlayersText += $"{Player.PlayerName},{Engine.GetTeamName(Player.PlayerType)},{Convert.ToInt32(Player.Score)},{Player.Kills},{Player.Deaths},{Player.Ping},{Main.FormatTime(TimeSpan.FromSeconds(Player.GameTime))},";
+                                    }
                                 }
-                            }
-                            if (!String.IsNullOrEmpty(PlayersText))
-                            {
-                                PlayersText = PlayersText.Substring(0, PlayersText.Length - 1);
+                                if (!String.IsNullOrEmpty(PlayersText))
+                                {
+                                    PlayersText = PlayersText.Substring(0, PlayersText.Length - 1);
+                                }
+
                             }
                         }
                         ServerDefinitions.Players = PlayersText;
 
                         //Team Informati0ns
                         IcTeam Team = Engine.FindTeam(0);
-                        TeamClass Nod = new TeamClass()
+                        if (Team != null)
                         {
-                            Name = Engine.GetTeamName(0),
-                            Score = Convert.ToInt64(Team.Score),
-                            Kills = Team.Kills,
-                            Deaths = Team.Deaths
-                        };
-                        ServerDefinitions.NodTeam = Nod;
+                            TeamClass Nod = new TeamClass()
+                            {
+                                Name = Engine.GetTeamName(0),
+                                Score = Convert.ToInt64(Team.Score),
+                                Kills = Team.Kills,
+                                Deaths = Team.Deaths
+                            };
+                            ServerDefinitions.NodTeam = Nod;
+                        }
 
                         IcTeam Team2 = Engine.FindTeam(1);
-                        TeamClass GDI = new TeamClass()
+                        if (Team2 != null)
                         {
-                            Name = Engine.GetTeamName(1),
-                            Score = Convert.ToInt64(Team2.Score),
-                            Kills = Team2.Kills,
-                            Deaths = Team2.Deaths
-                        };
-                        ServerDefinitions.GDITeam = GDI;
+                            TeamClass GDI = new TeamClass()
+                            {
+                                Name = Engine.GetTeamName(1),
+                                Score = Convert.ToInt64(Team2.Score),
+                                Kills = Team2.Kills,
+                                Deaths = Team2.Deaths
+                            };
+                            ServerDefinitions.GDITeam = GDI;
+                        }
 
                         //End of THONK!
                     }
                 }
-                catch (NullReferenceException)
+                catch (Exception ex)
                 {
 
                 }
             }
+        }
+
+        public void Log(LogSeverity Severity, object Something)
+        {
+
         }
 
         public override void SettingsLoadedEvent()
@@ -266,6 +302,9 @@ namespace RenWeb
                         RootHTTPFolder = entry.Value;
                         break;
                     case "IndexFile":
+                        IndexFile = entry.Value;
+                        break;
+                    case "LogFile":
                         IndexFile = entry.Value;
                         break;
                     case "MaxPendingConnections":
