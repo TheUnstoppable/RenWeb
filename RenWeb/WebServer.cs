@@ -222,66 +222,69 @@ namespace RenWeb
 
         public string ProcessHTML(string Text)
         {
-            string HTML = Text;
-            //Version
-            HTML = HTML.Replace("$RenWebHTML_Version", Main.Version);
+            lock (Main.LockObject)
+            {
+                string HTML = Text;
+                //Version
+                HTML = HTML.Replace("$RenWebHTML_Version", Main.Version);
 
-            //Server Name
-            HTML = HTML.Replace("$RenWebHTML_ServerName", ServerDefinitions.ServerName);
+                //Server Name
+                HTML = HTML.Replace("$RenWebHTML_ServerName", ServerDefinitions.ServerName);
 
-            //Current Map
-            HTML = HTML.Replace("$RenWebHTML_CurrentMap", ServerDefinitions.CurrentMap);
+                //Current Map
+                HTML = HTML.Replace("$RenWebHTML_CurrentMap", ServerDefinitions.CurrentMap);
 
-            //Next Map
-            HTML = HTML.Replace("$RenWebHTML_NextMap", ServerDefinitions.NextMap);
+                //Next Map
+                HTML = HTML.Replace("$RenWebHTML_NextMap", ServerDefinitions.NextMap);
 
-            //Time Left as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeLeftF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeLeft)));
+                //Time Left as Formatted String
+                HTML = HTML.Replace("$RenWebHTML_TimeLeftF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeLeft)));
 
-            //Time Left as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeLeft", ServerDefinitions.TimeLeft.ToString());
+                //Time Left as Seconds
+                HTML = HTML.Replace("$RenWebHTML_TimeLeft", ServerDefinitions.TimeLeft.ToString());
 
-            //Time Elapsed as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeElapsedF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeElapsed)));
+                //Time Elapsed as Formatted String
+                HTML = HTML.Replace("$RenWebHTML_TimeElapsedF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeElapsed)));
 
-            //Time Elapsed as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeElapsed", (ServerDefinitions.TimeElapsed).ToString());
+                //Time Elapsed as Seconds
+                HTML = HTML.Replace("$RenWebHTML_TimeElapsed", (ServerDefinitions.TimeElapsed).ToString());
 
-            //Time Limit as Formatted String
-            HTML = HTML.Replace("$RenWebHTML_TimeLimitF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeTotal)));
+                //Time Limit as Formatted String
+                HTML = HTML.Replace("$RenWebHTML_TimeLimitF", Main.FormatTime(TimeSpan.FromSeconds(ServerDefinitions.TimeTotal)));
 
-            //Time Limit as Seconds
-            HTML = HTML.Replace("$RenWebHTML_TimeLimit", (ServerDefinitions.TimeTotal * 60).ToString());
+                //Time Limit as Seconds
+                HTML = HTML.Replace("$RenWebHTML_TimeLimit", (ServerDefinitions.TimeTotal * 60).ToString());
 
-            //Long Gamemode Name
-            HTML = HTML.Replace("$RenWebHTML_GameMode", ServerDefinitions.GameMode);
+                //Long Gamemode Name
+                HTML = HTML.Replace("$RenWebHTML_GameMode", ServerDefinitions.GameMode);
 
-            //Short Gamemode Name
-            HTML = HTML.Replace("$RenWebHTML_SGameMode", ServerDefinitions.ShortGameMode);
+                //Short Gamemode Name
+                HTML = HTML.Replace("$RenWebHTML_SGameMode", ServerDefinitions.ShortGameMode);
 
-            //Player Count
-            HTML = HTML.Replace("$RenWebHTML_CurrentPlayerCount", ServerDefinitions.PlayerCount.ToString());
+                //Player Count
+                HTML = HTML.Replace("$RenWebHTML_CurrentPlayerCount", ServerDefinitions.PlayerCount.ToString());
 
-            //Max Player Count
-            HTML = HTML.Replace("$RenWebHTML_MaxPlayerCount", ServerDefinitions.MaxPlayerCount.ToString());
+                //Max Player Count
+                HTML = HTML.Replace("$RenWebHTML_MaxPlayerCount", ServerDefinitions.MaxPlayerCount.ToString());
 
-            //Players :O
-            HTML = HTML.Replace("$RenWebHTML_Players", ServerDefinitions.Players);
+                //Players :O
+                HTML = HTML.Replace("$RenWebHTML_Players", ServerDefinitions.Players);
 
-            //GDI Stuff
-            HTML = HTML.Replace("$RenWebHTML_GDIName", ServerDefinitions.GDITeam.Name);
-            HTML = HTML.Replace("$RenWebHTML_GDIPoints", ServerDefinitions.GDITeam.Score.ToString());
-            HTML = HTML.Replace("$RenWebHTML_GDIKills", ServerDefinitions.GDITeam.Kills.ToString());
-            HTML = HTML.Replace("$RenWebHTML_GDIDeaths", ServerDefinitions.GDITeam.Deaths.ToString());
+                //GDI Stuff
+                HTML = HTML.Replace("$RenWebHTML_GDIName", ServerDefinitions.GDITeam.Name);
+                HTML = HTML.Replace("$RenWebHTML_GDIPoints", ServerDefinitions.GDITeam.Score.ToString());
+                HTML = HTML.Replace("$RenWebHTML_GDIKills", ServerDefinitions.GDITeam.Kills.ToString());
+                HTML = HTML.Replace("$RenWebHTML_GDIDeaths", ServerDefinitions.GDITeam.Deaths.ToString());
 
-            //Nod Stuff
-            HTML = HTML.Replace("$RenWebHTML_NodName", ServerDefinitions.NodTeam.Name);
-            HTML = HTML.Replace("$RenWebHTML_NodPoints", ServerDefinitions.NodTeam.Score.ToString());
-            HTML = HTML.Replace("$RenWebHTML_NodKills", ServerDefinitions.NodTeam.Kills.ToString());
-            HTML = HTML.Replace("$RenWebHTML_NodDeaths", ServerDefinitions.NodTeam.Deaths.ToString());
+                //Nod Stuff
+                HTML = HTML.Replace("$RenWebHTML_NodName", ServerDefinitions.NodTeam.Name);
+                HTML = HTML.Replace("$RenWebHTML_NodPoints", ServerDefinitions.NodTeam.Score.ToString());
+                HTML = HTML.Replace("$RenWebHTML_NodKills", ServerDefinitions.NodTeam.Kills.ToString());
+                HTML = HTML.Replace("$RenWebHTML_NodDeaths", ServerDefinitions.NodTeam.Deaths.ToString());
 
-            //Finally -_-
-            return HTML;
+                //Finally -_-
+                return HTML;
+            }
         }
 
         public void Close()

@@ -28,7 +28,7 @@ namespace RenWeb
         public long Kills
         {
             get { return tKill; }
-            set { tScore = value; }
+            set { tKill = value; }
         }
         public long Deaths
         {
@@ -134,6 +134,7 @@ namespace RenWeb
         public static WebServer Server;
         public static string Version = "1.0";
         public static bool DoThink = false;
+        public static object LockObject = new object();
 
         public override void UnmanagedAttach()
         {
@@ -153,85 +154,87 @@ namespace RenWeb
             {
                 try
                 {
-                    //Current Map
-                    ServerDefinitions.CurrentMap = Engine.TheCncGame.MapName;
-
-                    //Next Map
-                    using (var GameDefinitions = Engine.GetGameDefinitions())
+                    lock (LockObject)
                     {
-                        string MapDef = Engine.GetMap(Engine.GetCurrentMapIndex() + (Engine.TheGame.IsIntermission ? 0 : 1));
-                        if (String.IsNullOrEmpty(MapDef))
-                            MapDef = Engine.GetMap(0);
-                        ServerDefinitions.NextMap = GameDefinitions.UnmanagedObject.First(x => x.Value.DisplayName == MapDef).Value.MapName;
-                    }
+                        //Current Map
+                        ServerDefinitions.CurrentMap = Engine.TheCncGame.MapName;
 
-                    //Server Name
-                    ServerDefinitions.ServerName = Engine.TheCncGame.GameTitle;
-
-                    //Time Left
-                    ServerDefinitions.TimeLeft = Convert.ToInt32(Engine.TheGame.TimeRemainingSeconds);
-
-                    //Time Elapsed
-                    ServerDefinitions.TimeElapsed = Convert.ToInt32(Engine.TheGame.GameDurationSeconds);
-
-                    //Time Total
-                    ServerDefinitions.TimeTotal = Convert.ToInt32(Engine.TheGame.TimeLimitMinutes * 60);
-
-                    //Game Mode
-                    ServerDefinitions.GameMode = DAGameManager.GameModeLongName;
-
-                    //Short Game Mode
-                    ServerDefinitions.ShortGameMode = DAGameManager.GameModeShortName;
-
-                    //Players
-                    ServerDefinitions.PlayerCount = Engine.TheGame.CurrentPlayers;
-
-                    //Max Players
-                    ServerDefinitions.MaxPlayerCount = Engine.TheGame.MaxPlayers;
-
-                    //Players
-                    string PlayersText = "";
-                    if ((Engine.GetPlayerList() as ICollection<IcPlayer>).Count > 0)
-                    {
-                        foreach (IcPlayer Player in Engine.GetPlayerList())
+                        //Next Map
+                        using (var GameDefinitions = Engine.GetGameDefinitions())
                         {
-                            if (Player.IsActive)
+                            string MapDef = Engine.GetMap(Engine.GetCurrentMapIndex() + (Engine.TheGame.IsIntermission ? 0 : 1));
+                            if (String.IsNullOrEmpty(MapDef))
+                                MapDef = Engine.GetMap(0);
+                            ServerDefinitions.NextMap = GameDefinitions.UnmanagedObject.First(x => x.Value.DisplayName == MapDef).Value.MapName;
+                        }
+
+                        //Server Name
+                        ServerDefinitions.ServerName = Engine.TheCncGame.GameTitle;
+
+                        //Time Left
+                        ServerDefinitions.TimeLeft = Convert.ToInt32(Engine.TheGame.TimeRemainingSeconds);
+
+                        //Time Elapsed
+                        ServerDefinitions.TimeElapsed = Convert.ToInt32(Engine.TheGame.GameDurationSeconds);
+
+                        //Time Total
+                        ServerDefinitions.TimeTotal = Convert.ToInt32(Engine.TheGame.TimeLimitMinutes * 60);
+
+                        //Game Mode
+                        ServerDefinitions.GameMode = DAGameManager.GameModeLongName;
+
+                        //Short Game Mode
+                        ServerDefinitions.ShortGameMode = DAGameManager.GameModeShortName;
+
+                        //Players
+                        ServerDefinitions.PlayerCount = Engine.TheGame.CurrentPlayers;
+
+                        //Max Players
+                        ServerDefinitions.MaxPlayerCount = Engine.TheGame.MaxPlayers;
+
+                        //Players
+                        string PlayersText = "";
+                        if ((Engine.GetPlayerList() as ICollection<IcPlayer>).Count > 0)
+                        {
+                            foreach (IcPlayer Player in Engine.GetPlayerList())
                             {
-                                PlayersText += $"{Player.PlayerName},{Engine.GetTeamName(Player.PlayerType)},{Convert.ToInt32(Player.Score)},{Player.Kills},{Player.Deaths},{Player.Ping},{Main.FormatTime(TimeSpan.FromSeconds(Player.GameTime))},";
+                                if (Player.IsActive)
+                                {
+                                    PlayersText += $"{Player.PlayerName},{Engine.GetTeamName(Player.PlayerType)},{Convert.ToInt32(Player.Score)},{Player.Kills},{Player.Deaths},{Player.Ping},{Main.FormatTime(TimeSpan.FromSeconds(Player.GameTime))},";
+                                }
+                            }
+                            if (!String.IsNullOrEmpty(PlayersText))
+                            {
+                                PlayersText = PlayersText.Substring(0, PlayersText.Length - 1);
                             }
                         }
-                        if (!String.IsNullOrEmpty(PlayersText))
+                        ServerDefinitions.Players = PlayersText;
+
+                        //Team Informati0ns
+                        IcTeam Team = Engine.FindTeam(0);
+                        TeamClass Nod = new TeamClass()
                         {
-                            PlayersText = PlayersText.Substring(0, PlayersText.Length - 1);
-                        }
+                            Name = Engine.GetTeamName(0),
+                            Score = Convert.ToInt64(Team.Score),
+                            Kills = Team.Kills,
+                            Deaths = Team.Deaths
+                        };
+                        ServerDefinitions.NodTeam = Nod;
+
+                        IcTeam Team2 = Engine.FindTeam(1);
+                        TeamClass GDI = new TeamClass()
+                        {
+                            Name = Engine.GetTeamName(1),
+                            Score = Convert.ToInt64(Team2.Score),
+                            Kills = Team2.Kills,
+                            Deaths = Team2.Deaths
+                        };
+                        ServerDefinitions.GDITeam = GDI;
+
+                        //End of THONK!
                     }
-                    ServerDefinitions.Players = PlayersText;
-
-                    //Team Informati0ns
-                    IcTeam Team = Engine.FindTeam(0);
-                    TeamClass Nod = new TeamClass()
-                    {
-                        Name = Engine.GetTeamName(0),
-                        Score = Convert.ToInt64(Team.Score),
-                        Kills = Team.Kills,
-                        Deaths = Team.Deaths
-                    };
-                    ServerDefinitions.NodTeam = Nod;
-
-                    IcTeam Team2 = Engine.FindTeam(1);
-                    TeamClass GDI = new TeamClass()
-                    {
-                        Name = Engine.GetTeamName(1),
-                        Score = Convert.ToInt64(Team2.Score),
-                        Kills = Team2.Kills,
-                        Deaths = Team2.Deaths
-                    };
-                    ServerDefinitions.GDITeam = GDI;
-
-                    //End of THONK!
-
                 }
-                catch (Exception)
+                catch (NullReferenceException)
                 {
 
                 }
