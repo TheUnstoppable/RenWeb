@@ -8,6 +8,34 @@ using System.Threading.Tasks;
 
 namespace RenWeb
 {
+    public class TeamClass
+    {
+        private string tName = "Unknown";
+        private long tScore = 0;
+        private long tKill = 0;
+        private long tDeath = 0;
+
+        public string Name
+        {
+            get { return tName; }
+            set { tName = value; }
+        }
+        public long Score
+        {
+            get { return tScore; }
+            set { tScore = value; }
+        }
+        public long Kills
+        {
+            get { return tKill; }
+            set { tScore = value; }
+        }
+        public long Deaths
+        {
+            get { return tDeath; }
+            set { tDeath = value; }
+        }
+    }
     public class ServerDefinitions
     {
         //Private TOP SECRET!!
@@ -22,6 +50,9 @@ namespace RenWeb
         private static string pPl = "";
         private static int pCPC = 0;
         private static int pMPC = 0;
+        private static TeamClass pGDI = new TeamClass() { Name = "Unknown", Kills = 0, Deaths = 0, Score = 0};
+        private static TeamClass pNod = new TeamClass() { Name = "Unknown", Kills = 0, Deaths = 0, Score = 0 };
+
 
         //Public
         public static string CurrentMap
@@ -78,6 +109,16 @@ namespace RenWeb
         {
             get { return pPl; }
             set { pPl = value; }
+        }
+        public static TeamClass GDITeam
+        {
+            get { return pGDI; }
+            set { pGDI = value; }
+        }
+        public static TeamClass NodTeam
+        {
+            get { return pNod; }
+            set { pNod = value; }
         }
     }
 
@@ -165,6 +206,30 @@ namespace RenWeb
                         }
                     }
                     ServerDefinitions.Players = PlayersText;
+
+                    //Team Informati0ns
+                    IcTeam Team = Engine.FindTeam(0);
+                    TeamClass Nod = new TeamClass()
+                    {
+                        Name = Engine.GetTeamName(0),
+                        Score = Convert.ToInt64(Team.Score),
+                        Kills = Team.Kills,
+                        Deaths = Team.Deaths
+                    };
+                    ServerDefinitions.NodTeam = Nod;
+
+                    IcTeam Team2 = Engine.FindTeam(1);
+                    TeamClass GDI = new TeamClass()
+                    {
+                        Name = Engine.GetTeamName(1),
+                        Score = Convert.ToInt64(Team2.Score),
+                        Kills = Team2.Kills,
+                        Deaths = Team2.Deaths
+                    };
+                    ServerDefinitions.GDITeam = GDI;
+
+                    //End of THONK!
+
                 }
                 catch (Exception)
                 {

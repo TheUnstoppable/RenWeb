@@ -136,10 +136,17 @@ namespace RenWeb
                     }
                     catch (Exception ex)
                     {
-                        if (context != null)
+                        try
                         {
-                            Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
-                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            if (context != null)
+                            {
+                                Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
+                                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            }
+                        }
+                        catch(Exception)
+                        {
+                            Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client. {ex.ToString()} - {ex.Message}\n");
                         }
                     }
 
@@ -196,13 +203,20 @@ namespace RenWeb
             }
             catch (Exception ex)
             {
-                if (context != null)
+                try
                 {
-                    Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    if (context != null)
+                    {
+                        Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    }
+                    else
+                        Engine.ConsoleOutput($"[RenWeb] Failed to send website to a unknown client. {ex.ToString()} - {ex.Message}\n");
                 }
-                else
-                    Engine.ConsoleOutput($"[RenWeb] Failed to send website to a unknown client. {ex.ToString()} - {ex.Message}\n");
+                catch(Exception)
+                {
+                    Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client. {ex.ToString()} - {ex.Message}\n");
+                }
             }
         }
 
@@ -253,6 +267,18 @@ namespace RenWeb
 
             //Players :O
             HTML = HTML.Replace("$RenWebHTML_Players", ServerDefinitions.Players);
+
+            //GDI Stuff
+            HTML = HTML.Replace("$RenWebHTML_GDIName", ServerDefinitions.GDITeam.Name);
+            HTML = HTML.Replace("$RenWebHTML_GDIPoints", ServerDefinitions.GDITeam.Score.ToString());
+            HTML = HTML.Replace("$RenWebHTML_GDIKills", ServerDefinitions.GDITeam.Kills.ToString());
+            HTML = HTML.Replace("$RenWebHTML_GDIDeaths", ServerDefinitions.GDITeam.Deaths.ToString());
+
+            //Nod Stuff
+            HTML = HTML.Replace("$RenWebHTML_NodName", ServerDefinitions.NodTeam.Name);
+            HTML = HTML.Replace("$RenWebHTML_NodPoints", ServerDefinitions.NodTeam.Score.ToString());
+            HTML = HTML.Replace("$RenWebHTML_NodKills", ServerDefinitions.NodTeam.Kills.ToString());
+            HTML = HTML.Replace("$RenWebHTML_NodDeaths", ServerDefinitions.NodTeam.Deaths.ToString());
 
             //Finally -_-
             return HTML;
