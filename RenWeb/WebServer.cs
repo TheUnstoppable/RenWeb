@@ -9,6 +9,8 @@ using RenSharp;
 using HtmlAgilityPack;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
+using Newtonsoft.Json;
 
 namespace RenWeb
 {
@@ -125,6 +127,24 @@ namespace RenWeb
                             {
                                 Stream = Encoding.UTF8.GetBytes(ProcessHTML(File.ReadAllText(Path)));
                             }
+                            else if(mime == "renweb/embed-file-png")
+                            {
+                                MemoryStream Embed = Embedding.RenderImage(ImageFormat.Png, JsonConvert.DeserializeObject<RenderableEmbedClass>(File.ReadAllText(Path)));
+                                Stream = Embed.ToArray();
+                                mime = "image/png";
+                            }
+                            else if (mime == "renweb/embed-file-jpeg")
+                            {
+                                MemoryStream Embed = Embedding.RenderImage(ImageFormat.Jpeg, JsonConvert.DeserializeObject<RenderableEmbedClass>(File.ReadAllText(Path)));
+                                Stream = Embed.ToArray();
+                                mime = "image/jpeg";
+                            }
+                            else if (mime == "renweb/embed-file-gif")
+                            {
+                                MemoryStream Embed = Embedding.RenderImage(ImageFormat.Gif, JsonConvert.DeserializeObject<RenderableEmbedClass>(File.ReadAllText(Path)));
+                                Stream = Embed.ToArray();
+                                mime = "image/gif";
+                            }
                             else if (mime != null)
                             {
                                 Stream = File.ReadAllBytes(Path);
@@ -235,7 +255,7 @@ namespace RenWeb
             }
         }
 
-        public string ProcessHTML(string Text)
+        public static string ProcessHTML(string Text)
         {
             lock (Main.LockObject)
             {
