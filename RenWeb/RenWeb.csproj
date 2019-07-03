@@ -38,6 +38,10 @@
     <Reference Include="ManagedScripts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5982e7a196b6d86a, processorArchitecture=x86">
       <HintPath>..\packages\Neijwiert.RenSharp.1.2.0\lib\net472\ManagedScripts.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -50,6 +54,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EmbedClass.cs" />
+    <Compile Include="Embedding.cs" />
     <Compile Include="FileStorage.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
