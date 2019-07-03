@@ -22,6 +22,7 @@ namespace RenWeb
             {
                 IgnoreWriteExceptions = true
             };
+            Main.Log(LogSeverity.Info, "Starting server...");
             listener.Prefixes.Add($"http://*:{Main.Port}/");
             listener.Start();
             handlers = new System.Collections.Generic.List<Thread>();
@@ -32,6 +33,7 @@ namespace RenWeb
                 tr.Start();
             }
             Engine.ConsoleOutput($"[RenWeb] The RenWeb Server is now listening port {Main.Port}.\n");
+            Main.Log(LogSeverity.Info, $"The RenWeb Server is now listening port {Main.Port}.");
         }
 
         public string GetPhysicalPath(Uri u)
@@ -141,18 +143,21 @@ namespace RenWeb
                             if (context != null)
                             {
                                 Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
+                                Main.Log(LogSeverity.Info, $"Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}");
                                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                             }
                         }
                         catch(Exception)
                         {
-                            Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client. {ex.ToString()} - {ex.Message}\n");
+                            Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client: {ex.ToString()} - {ex.Message}\n");
+                            Main.Log(LogSeverity.Info, $"Failed to send website to closed-connection client: {ex.ToString()} - {ex.Message}");
                         }
                     }
 
 
                     if (context.Response.StatusCode != 200)
                     {
+                        Main.Log(LogSeverity.Warning, $"Something happened and server had to return HTTP \"{context.Response.StatusCode}\" code to client.");
                         string ErrorFile = Main.RootHTTPFolder + "\\" + GetHtmlErrorPage(context.Response.StatusCode);
                         if (ErrorFile != null)
                         {
@@ -192,14 +197,19 @@ namespace RenWeb
                     }
 
                     //Closing connection.
+                    try
+                    {
+                        Main.Log(LogSeverity.Connection, new ConnectionData() { IP = context.Request.RemoteEndPoint.Address, Request = context.Request.Url, Result = context.Response.StatusCode });
+                    }
+                    catch(Exception ex) { Engine.ConsoleOutput("[RenWeb] Failed to log a request: " + ex.Message); }
                     context.Response.Close();
                     Thread.Sleep(50); //Wait 50 milliseconds to let app pee ;p
                 }
 
             }
-            catch(ObjectDisposedException)
+            catch(ObjectDisposedException exc)
             {
-                
+                Main.Log(LogSeverity.Error, exc);
             }
             catch (Exception ex)
             {
@@ -208,14 +218,19 @@ namespace RenWeb
                     if (context != null)
                     {
                         Engine.ConsoleOutput($"[RenWeb] Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}\n");
+                        Main.Log(LogSeverity.Info, $"Failed to send website to {context.Request.RemoteEndPoint.Address.ToString()}: {ex.ToString()} - {ex.Message}");
                         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     }
                     else
+                    {
                         Engine.ConsoleOutput($"[RenWeb] Failed to send website to a unknown client. {ex.ToString()} - {ex.Message}\n");
+                        Main.Log(LogSeverity.Warning, $"Failed to send website to unknown client: {ex.ToString()} - {ex.Message}");
+                    }
                 }
-                catch(Exception)
+                catch (Exception)
                 {
-                    Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client. {ex.ToString()} - {ex.Message}\n");
+                    Engine.ConsoleOutput($"[RenWeb] Failed to send website to a closed-connection client: {ex.ToString()} - {ex.Message}\n");
+                    Main.Log(LogSeverity.Warning, $"Failed to send website to closed-connection client: {ex.ToString()} - {ex.Message}");
                 }
             }
         }
@@ -289,6 +304,7 @@ namespace RenWeb
 
         public void Close()
         {
+            Main.Log(LogSeverity.Info, "Stopping server...");
             listener.Close();
             listener.Abort();
         }

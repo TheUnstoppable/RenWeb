@@ -3,8 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace RenWeb
 {
@@ -14,6 +17,13 @@ namespace RenWeb
         Warning = 1,
         Error = 2,
         Connection = 3
+    }
+
+    public class ConnectionData
+    {
+        public IPAddress IP;
+        public Uri Request;
+        public int Result;
     }
 
     public class TeamClass
@@ -137,6 +147,7 @@ namespace RenWeb
         public static int MaxPendingConnections = 5;
         public static string RootHTTPFolder = "RenWebHTML";
         public static string IndexFile = "index.html";
+        public static string LogFile = @"RWLogs\RenWeb.log";
         public static IDictionary<string, string> MimeTypes = new Dictionary<string, string>();
         public static IDictionary<System.Collections.Generic.List<int>, string> ErrorPages = new Dictionary<System.Collections.Generic.List<int>, string>();
         public static WebServer Server;
@@ -146,6 +157,7 @@ namespace RenWeb
 
         public override void UnmanagedAttach()
         {
+            Control.CheckForIllegalCrossThreadCalls = false;
             RegisterEvent(DAEventType.SettingsLoaded);
             RegisterEvent(DAEventType.Think);
             RegisterEvent(DAEventType.LevelLoaded);
@@ -272,9 +284,62 @@ namespace RenWeb
             }
         }
 
-        public void Log(LogSeverity Severity, object Something)
+        public static void Log(LogSeverity Severity, object Something)
         {
+            switch(Severity)
+            {
+                case LogSeverity.Connection:
+                    var Client = (ConnectionData)Something;
+                    var ConResult = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] {Client.IP.ToString()} is requested {Client.Request.AbsoluteUri} and HTTP code is {Client.Result}.");
+                    if (ConResult != null)
+                        Engine.ConsoleOutput($"[RenWeb] {ConResult}");                        
+                    break;
+                case LogSeverity.Error:
+                    var Exception = (Exception)Something;
+                    var ErrResult1 = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] An error occured while RenWeb doing something.");
+                    var ErrResult2 = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] Error: {Exception.ToString()}");
+                    var ErrResult3 = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] Message: {Exception.Message}");
+                    if (ErrResult1 != null)
+                        Engine.ConsoleOutput($"[RenWeb] {ErrResult1}");
+                    if (ErrResult2 != null)
+                        Engine.ConsoleOutput($"[RenWeb] {ErrResult2}");
+                    if (ErrResult3 != null)
+                        Engine.ConsoleOutput($"[RenWeb] {ErrResult3}");
+                    break;
+                case LogSeverity.Info:
+                    var InfResult = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] {(string)Something}");
+                    if (InfResult != null)
+                        Engine.ConsoleOutput($"[RenWeb] {InfResult}");
+                    break;
+                case LogSeverity.Warning:
+                    var WarnResult = AppendLog($"[{DateTime.Now.ToString("dd/MM/yyyy-HH:mm:ss")}|{Severity.ToString()}] {(string)Something}");
+                    if (WarnResult != null)
+                        Engine.ConsoleOutput($"[RenWeb] {WarnResult}");
+                    break;
+            }
+        }
 
+        private static string AppendLog(string Line)
+        {
+            try
+            {
+                if (File.Exists(LogFile))
+                {
+                    StreamWriter Writer = new StreamWriter(LogFile, true);
+                    Writer.WriteLine(Line);
+                    Writer.Close();
+                }
+                else
+                {
+                    MakeFile(LogFile);
+                    return "Could not locate log file.";
+                }
+                return null;
+            }
+            catch(IOException)
+            {
+                return "An I/O exception occured while writing into log file.";
+            }
         }
 
         public override void SettingsLoadedEvent()
@@ -295,6 +360,7 @@ namespace RenWeb
                         else
                         {
                             Engine.ConsoleOutput($"[RenWeb] Port value is invalid! Using default port 7550...\n");
+                            Log(LogSeverity.Warning, $"Port value is invalid! Supplied value: \"{port}\". Using default port \"7550\"");
                             Port = 7550;
                         }
                         break;
@@ -315,6 +381,7 @@ namespace RenWeb
                         else
                         {
                             Engine.ConsoleOutput($"[RenWeb] Max pending conections value is invalid! Using default 5...\n");
+                            Log(LogSeverity.Warning, $"Max pending conections value is invalid! Supplied value: \"{max}\". Using default \"5\"");
                             MaxPendingConnections = 5;
                         }
                         break;
@@ -326,12 +393,14 @@ namespace RenWeb
                         else
                         {
                             Engine.ConsoleOutput($"[RenWeb] Game log value is invalid! Using default true...\n");
+                            Log(LogSeverity.Warning, $"Game log value is invalid! Supplied value: \"{isit}\". Using default \"true\"");
                             GameLog = true;
                         }
                         break;
                     default:
                         Engine.ConsoleOutput($"[RenWeb] Invalid entry detected under RenWeb section in configuration file!\n" +
                                              $"[RenWeb] Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"\n");
+                        Log(LogSeverity.Warning, $"Invalid config value detected under [RenWeb]. Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"\n");
                         break;
 
                 }
@@ -357,6 +426,7 @@ namespace RenWeb
                     else
                     {
                         Engine.ConsoleOutput($"[RenWeb] Invalid error code detected under RenWeb_ErrorPages! Value: {s}\n");
+                        Log(LogSeverity.Warning, $"Invalid error code under RenWeb_ErrorPages! Value: {s}. Skipping this code...");
                     }
                 }
                 ErrorPages.Add(ErrCodes, entry.Value);
@@ -365,8 +435,121 @@ namespace RenWeb
             if (!Directory.Exists(Main.RootHTTPFolder))
             {
                 Directory.CreateDirectory(Main.RootHTTPFolder);
+                Setup(Main.RootHTTPFolder);
+            }
+            if(!File.Exists(Main.LogFile))
+            {
+                MakeFile(Main.LogFile);
             }
             RestartServer(); //Start server if not running, restart if running.
+        }
+
+        public static void Setup(string Root)
+        {
+            Application.EnableVisualStyles();
+            Welcomer w = new Welcomer();
+            w = new Welcomer();
+            w.Show();
+
+            Thread tr = new Thread(() =>
+            {
+                //Ehh ¯\_(ツ)_/¯ (According to me, RAM is ok until this is initialized.)
+                FileStorage Stor = new FileStorage();
+
+                //Creating every single file.
+                w.UpdateLabel("Creating files... (Index.html)");
+                MakeFile(Main.RootHTTPFolder + "\\Index.html");
+                w.UpdateLabel("Creating files... (Info.html)");
+                MakeFile(Main.RootHTTPFolder + "\\Info.html");
+                w.UpdateLabel("Creating files... (Players.html)");
+                MakeFile(Main.RootHTTPFolder + "\\Players.html");
+                w.UpdateLabel("Creating files... (Teams.html)");
+                MakeFile(Main.RootHTTPFolder + "\\Teams.html");
+                w.UpdateLabel("Creating files... (Renegade.html)");
+                MakeFile(Main.RootHTTPFolder + "\\Renegade.html");
+                w.UpdateLabel("Creating files... (404.html)");
+                MakeFile(Main.RootHTTPFolder + "\\404.html");
+                w.UpdateLabel("Creating files... (ServerError.html)");
+                MakeFile(Main.RootHTTPFolder + "\\ServerError.html");
+
+                w.UpdateLabel("Creating files... (RenSS1.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS1.jpg");
+                w.UpdateLabel("Creating files... (RenSS2.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS2.jpg");
+                w.UpdateLabel("Creating files... (RenSS3.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS3.jpg");
+                w.UpdateLabel("Creating files... (RenSS4.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS4.jpg");
+                w.UpdateLabel("Creating files... (RenSS5.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS5.jpg");
+                w.UpdateLabel("Creating files... (RenSS6.jpg)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\RenSS6.jpg");
+
+                w.UpdateLabel("Creating files... (GDI.png)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\teams\\GDI.png");
+                w.UpdateLabel("Creating files... (Nod.png)");
+                MakeFile(Main.RootHTTPFolder + "\\img\\teams\\Nod.png");
+
+                //Writing...
+                w.UpdateLabel("Writing files... (Index.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\Index.html", Stor.Index);
+                w.UpdateLabel("Writing files... (Info.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\Info.html", Stor.Info);
+                w.UpdateLabel("Writing files... (Players.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\Players.html", Stor.Players);
+                w.UpdateLabel("Writing files... (Teams.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\Teams.html", Stor.Teams);
+                w.UpdateLabel("Writing files... (Renegade.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\Renegade.html", Stor.AboutRenegade);
+                w.UpdateLabel("Writing files... (404.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\404.html", Stor.Page404);
+                w.UpdateLabel("Writing files... (ServerError.html)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\ServerError.html", Stor.PageServerError);
+
+                w.UpdateLabel("Writing files... (Screenshots)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS1.jpg", Stor.RenSS1);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS2.jpg", Stor.RenSS2);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS3.jpg", Stor.RenSS3);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS4.jpg", Stor.RenSS4);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS5.jpg", Stor.RenSS5);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS6.jpg", Stor.RenSS6);
+
+                w.UpdateLabel("Writing files... (Team Logo)");
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\teams\\GDI.png", Stor.LogoGDI);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\teams\\Nod.png", Stor.LogoNod);
+
+                //Clearing all bytes.
+                w.UpdateLabel("Finalizing...");
+                Thread.Sleep(150);
+                Stor.Dispose();
+                Stor = null;
+                w.Done();
+            });
+
+            tr.SetApartmentState(ApartmentState.STA);
+            tr.Start();
+        }
+
+        public static void MakeFile(string FullPath)
+        {
+            string[] Path = FullPath.Split('\\');
+            string Dir = "";
+            for(int i = 0; i < Path.Length; i++)
+            {
+                Dir += Path[i] + "\\";
+                if (i + 1 < Path.Length)
+                {
+                    if (!Directory.Exists(Dir))
+                    {
+                        Directory.CreateDirectory(Dir);
+                    }
+                }
+                else if(!File.Exists(Dir))
+                {
+                    Dir = Dir.Remove(Dir.Length - 1, 1);
+                    File.Create(Dir).Close();
+                }
+            }
         }
 
         public static string FormatTime(DateTime dt)
@@ -381,8 +564,10 @@ namespace RenWeb
 
         public void RestartServer()
         {
-            if(Server != null)
+            if (Server != null)
+            {
                 Server.Close();
+            }
 
             Server = new WebServer();
         }
