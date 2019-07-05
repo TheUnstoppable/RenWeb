@@ -67,6 +67,9 @@ namespace RenWeb
         public string Color = null;
 
         [JsonProperty(Required = Required.AllowNull)]
+        public string LineAlign = null;
+
+        [JsonProperty(Required = Required.AllowNull)]
         public bool Bold = false;
 
         [JsonProperty(Required = Required.AllowNull)]

@@ -7,6 +7,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
 
 namespace RenWeb
 {
@@ -33,30 +34,49 @@ namespace RenWeb
                 }
             }
 
-            if(EmbedData.Texts != null)
+            if (EmbedData.Texts != null)
             {
-                foreach(RenderableEmbedTextClass Text in EmbedData.Texts)
+                foreach (RenderableEmbedTextClass Text in EmbedData.Texts)
                 {
                     FontStyle Style = FontStyle.Regular;
-                    if(Text.Bold && Text.Italic)
+                    if (Text.Bold && Text.Italic)
                     {
                         Style = FontStyle.Bold | FontStyle.Italic;
                     }
-                    else if(Text.Bold)
+                    else if (Text.Bold)
                     {
                         Style = FontStyle.Bold;
                     }
-                    else if(Text.Italic)
+                    else if (Text.Italic)
                     {
                         Style = FontStyle.Italic;
                     }
 
+                    StringFormat SFormat = new StringFormat();
+                    switch (Text.LineAlign.ToLower())
+                    {
+                        case "left":
+                            SFormat.LineAlignment = StringAlignment.Near;
+                            break;
+                        case "center":
+                            SFormat.LineAlignment = StringAlignment.Center;
+                            break;
+                        case "right":
+                            SFormat.LineAlignment = StringAlignment.Far;
+                            break;
+                        default:
+                            SFormat = StringFormat.GenericDefault;
+                            break;
+                    }
+
                     FontFamily Family = new FontFamily(Text.FontFamily);
                     Font Font = new Font(Family, (float)Text.Size, Style, GraphicsUnit.Pixel);
+                    Rectangle Bound = new Rectangle(Text.X, Text.Y, EmbedData.Width - Text.X, Font.Height + 10 /* To fix underscores, etc. */);
                     string Formatted = WebServer.ProcessHTML(Text.Text);
                     if (Formatted.Length > Text.MaxCharacters)
-                         Formatted = Formatted.Substring(0, Text.MaxCharacters) + "...";
-                    g.DrawString(Formatted, Font, new SolidBrush(HexToColor(Text.Color)), Text.X, Text.Y);
+                        Formatted = Formatted.Substring(0, Text.MaxCharacters) + "...";
+                    g.DrawString(Formatted, Font, new SolidBrush(HexToColor(Text.Color)), Bound, SFormat);
+                    g.DrawRectangle(Pens.Transparent, Bound);
                 }
             }
             MemoryStream ms = new MemoryStream();
