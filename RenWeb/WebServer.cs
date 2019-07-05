@@ -325,6 +325,10 @@ namespace RenWeb
         public void Close()
         {
             Main.Log(LogSeverity.Info, "Stopping server...");
+            foreach(Thread T in handlers)
+            {
+                T.Join();
+            }
             listener.Close();
             listener.Abort();
         }
