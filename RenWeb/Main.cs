@@ -1,9 +1,11 @@
 ﻿using RenSharp;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -157,7 +159,6 @@ namespace RenWeb
 
         public override void UnmanagedAttach()
         {
-            Control.CheckForIllegalCrossThreadCalls = false;
             RegisterEvent(DAEventType.SettingsLoaded);
             RegisterEvent(DAEventType.Think);
             RegisterEvent(DAEventType.LevelLoaded);
@@ -346,102 +347,122 @@ namespace RenWeb
         {
             MimeTypes.Clear();
             ErrorPages.Clear();
-            IDASettingsClass settings = DASettingsManager.GetSettings("da.ini");
-            IINISection section = settings.GetSection("RenWeb");
-            foreach (IINIEntry entry in section.EntryList)
+            IDASettingsClass settings = DASettingsManager.GetSettings("RenWeb.ini");
+            if (settings != null)
             {
-                switch (entry.Entry)
+                IINISection section = settings.GetSection("RenWeb");
+                foreach (IINIEntry entry in section.EntryList)
                 {
-                    case "Port":
-                        if(int.TryParse(entry.Value, out int port))
-                        {
-                            Port = port;
-                        }
-                        else
-                        {
-                            Engine.ConsoleOutput($"[RenWeb] Port value is invalid! Using default port 7550...\n");
-                            Log(LogSeverity.Warning, $"Port value is invalid! Supplied value: \"{port}\". Using default port \"7550\"");
-                            Port = 7550;
-                        }
-                        break;
-                    case "RootHTTPFolder":
-                        RootHTTPFolder = entry.Value;
-                        break;
-                    case "IndexFile":
-                        IndexFile = entry.Value;
-                        break;
-                    case "LogFile":
-                        IndexFile = entry.Value;
-                        break;
-                    case "MaxPendingConnections":
-                        if (int.TryParse(entry.Value, out int max))
-                        {
-                             MaxPendingConnections = max;
-                        }
-                        else
-                        {
-                            Engine.ConsoleOutput($"[RenWeb] Max pending conections value is invalid! Using default 5...\n");
-                            Log(LogSeverity.Warning, $"Max pending conections value is invalid! Supplied value: \"{max}\". Using default \"5\"");
-                            MaxPendingConnections = 5;
-                        }
-                        break;
-                    case "GameLog":
-                        if (bool.TryParse(entry.Value, out bool isit))
-                        {
-                            GameLog = isit;
-                        }
-                        else
-                        {
-                            Engine.ConsoleOutput($"[RenWeb] Game log value is invalid! Using default true...\n");
-                            Log(LogSeverity.Warning, $"Game log value is invalid! Supplied value: \"{isit}\". Using default \"true\"");
-                            GameLog = true;
-                        }
-                        break;
-                    default:
-                        Engine.ConsoleOutput($"[RenWeb] Invalid entry detected under RenWeb section in configuration file!\n" +
-                                             $"[RenWeb] Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"\n");
-                        Log(LogSeverity.Warning, $"Invalid config value detected under [RenWeb]. Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"\n");
-                        break;
-
-                }
-            }
-
-            IINISection Mime = settings.GetSection("RenWeb_MimeTypes");
-            foreach (IINIEntry entry in Mime.EntryList)
-            {
-                MimeTypes.Add(entry.Entry, entry.Value);
-            }
-
-            IINISection Page = settings.GetSection("RenWeb_ErrorPages");
-            foreach (IINIEntry entry in Page.EntryList)
-            {
-                string[] Errors = entry.Entry.Split('|');
-                System.Collections.Generic.List<int> ErrCodes = new System.Collections.Generic.List<int>();
-                foreach(string s in Errors)
-                {
-                    if(int.TryParse(s, out int Code))
+                    switch (entry.Entry)
                     {
-                        ErrCodes.Add(Code);
-                    }
-                    else
-                    {
-                        Engine.ConsoleOutput($"[RenWeb] Invalid error code detected under RenWeb_ErrorPages! Value: {s}\n");
-                        Log(LogSeverity.Warning, $"Invalid error code under RenWeb_ErrorPages! Value: {s}. Skipping this code...");
+                        case "Port":
+                            if (int.TryParse(entry.Value, out int port))
+                            {
+                                Port = port;
+                            }
+                            else
+                            {
+                                Engine.ConsoleOutput($"[RenWeb] Port value is invalid! Using default port 7550...\n");
+                                Log(LogSeverity.Warning, $"Port value is invalid! Supplied value: \"{port}\". Using default port \"7550\"");
+                                Port = 7550;
+                            }
+                            break;
+                        case "RootHTTPFolder":
+                            RootHTTPFolder = entry.Value;
+                            break;
+                        case "IndexFile":
+                            IndexFile = entry.Value;
+                            break;
+                        case "LogFile":
+                            LogFile = entry.Value;
+                            break;
+                        case "MaxPendingConnections":
+                            if (int.TryParse(entry.Value, out int max))
+                            {
+                                MaxPendingConnections = max;
+                            }
+                            else
+                            {
+                                Engine.ConsoleOutput($"[RenWeb] Max pending conections value is invalid! Using default 5...\n");
+                                Log(LogSeverity.Warning, $"Max pending conections value is invalid! Supplied value: \"{max}\". Using default \"5\"");
+                                MaxPendingConnections = 5;
+                            }
+                            break;
+                        case "GameLog":
+                            if (bool.TryParse(entry.Value, out bool isit))
+                            {
+                                GameLog = isit;
+                            }
+                            else
+                            {
+                                Engine.ConsoleOutput($"[RenWeb] Game log value is invalid! Using default true...\n");
+                                Log(LogSeverity.Warning, $"Game log value is invalid! Supplied value: \"{isit}\". Using default \"true\"");
+                                GameLog = true;
+                            }
+                            break;
+                        default:
+                            Engine.ConsoleOutput($"[RenWeb] Invalid entry detected under RenWeb section in configuration file!\n" +
+                                                 $"[RenWeb] Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"\n");
+                            Log(LogSeverity.Warning, $"Invalid config value detected under [RenWeb]. Key: \"{entry.Entry}\" | Value: \"{entry.Value}\"");
+                            break;
+
                     }
                 }
-                ErrorPages.Add(ErrCodes, entry.Value);
-            }
 
-            if (!Directory.Exists(Main.RootHTTPFolder))
-            {
-                Directory.CreateDirectory(Main.RootHTTPFolder);
-                Setup(Main.RootHTTPFolder);
+                IINISection Mime = settings.GetSection("RenWeb_MimeTypes");
+                foreach (IINIEntry entry in Mime.EntryList)
+                {
+                    MimeTypes.Add(entry.Entry, entry.Value);
+                }
+
+                IINISection Page = settings.GetSection("RenWeb_ErrorPages");
+                foreach (IINIEntry entry in Page.EntryList)
+                {
+                    string[] Errors = entry.Entry.Split('|');
+                    System.Collections.Generic.List<int> ErrCodes = new System.Collections.Generic.List<int>();
+                    foreach (string s in Errors)
+                    {
+                        if (int.TryParse(s, out int Code))
+                        {
+                            ErrCodes.Add(Code);
+                        }
+                        else
+                        {
+                            Engine.ConsoleOutput($"[RenWeb] Invalid error code detected under RenWeb_ErrorPages! Value: {s}\n");
+                            Log(LogSeverity.Warning, $"Invalid error code under RenWeb_ErrorPages! Value: {s}. Skipping this code...\n");
+                        }
+                    }
+                    ErrorPages.Add(ErrCodes, entry.Value);
+                }
+
+                if (!Directory.Exists(Main.RootHTTPFolder))
+                {
+                    Directory.CreateDirectory(Main.RootHTTPFolder);
+                    Setup(Main.RootHTTPFolder);
+                }
+                if (!File.Exists(Main.LogFile))
+                {
+                    MakeFile(Main.LogFile);
+                }
+                RestartServer(); //Start server if not running, restart if running.
             }
-            if(!File.Exists(Main.LogFile))
+            else
             {
-                MakeFile(Main.LogFile);
+                string ServerRoot = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "RenWeb.ini");
+                if (!File.Exists(ServerRoot))
+                {
+                    Engine.ConsoleOutput("[RenWeb] Could not find RenWeb.ini in server folder. Creating a one with default settings...\n");
+                    File.Create(ServerRoot).Close();
+                    File.WriteAllBytes(ServerRoot, FileStorage.Config);
+                    DASettingsManager.AddSettings("RenWeb.ini");
+                    Engine.ConsoleInput("reload");
+                }
+                else
+                {
+                    Engine.ConsoleOutput("[RenWeb] FATAL ERROR! Failed to load RenWeb settings file. RenWeb.ini could not be found in " + ServerRoot + "\n");
+                    Engine.ConsoleInput("exit");
+                }
             }
-            RestartServer(); //Start server if not running, restart if running.
         }
 
         public static void Setup(string Root)
@@ -457,56 +478,63 @@ namespace RenWeb
                 FileStorage Stor = new FileStorage();
 
                 //Creating every single file.
-                w.UpdateLabel("Creating files... (Index.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Index.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\Index.html");
-                w.UpdateLabel("Creating files... (Info.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Info.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\Info.html");
-                w.UpdateLabel("Creating files... (Players.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Players.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\Players.html");
-                w.UpdateLabel("Creating files... (Teams.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Teams.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\Teams.html");
-                w.UpdateLabel("Creating files... (Renegade.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Renegade.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\Renegade.html");
-                w.UpdateLabel("Creating files... (404.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (404.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\404.html");
-                w.UpdateLabel("Creating files... (ServerError.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (ServerError.html)"));
                 MakeFile(Main.RootHTTPFolder + "\\ServerError.html");
 
-                w.UpdateLabel("Creating files... (RenSS1.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS1.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS1.jpg");
-                w.UpdateLabel("Creating files... (RenSS2.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS2.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS2.jpg");
-                w.UpdateLabel("Creating files... (RenSS3.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS3.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS3.jpg");
-                w.UpdateLabel("Creating files... (RenSS4.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS4.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS4.jpg");
-                w.UpdateLabel("Creating files... (RenSS5.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS5.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS5.jpg");
-                w.UpdateLabel("Creating files... (RenSS6.jpg)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (RenSS6.jpg)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\RenSS6.jpg");
 
-                w.UpdateLabel("Creating files... (GDI.png)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (GDI.png)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\teams\\GDI.png");
-                w.UpdateLabel("Creating files... (Nod.png)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Nod.png)"));
                 MakeFile(Main.RootHTTPFolder + "\\img\\teams\\Nod.png");
+                
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (Icon16.png)"));
+                MakeFile(Main.RootHTTPFolder + "\\ServerLogos\\Icon16.png");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (EmbedFrame2.png)"));
+                MakeFile(Main.RootHTTPFolder + "\\ServerLogos\\EmbedFrame2.png");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Creating files... (ExampleEmbed.embed)"));
+                MakeFile(Main.RootHTTPFolder + "\\ExampleEmbed.embed");
 
                 //Writing...
-                w.UpdateLabel("Writing files... (Index.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Index.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\Index.html", Stor.Index);
-                w.UpdateLabel("Writing files... (Info.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Info.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\Info.html", Stor.Info);
-                w.UpdateLabel("Writing files... (Players.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Players.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\Players.html", Stor.Players);
-                w.UpdateLabel("Writing files... (Teams.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Teams.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\Teams.html", Stor.Teams);
-                w.UpdateLabel("Writing files... (Renegade.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Renegade.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\Renegade.html", Stor.AboutRenegade);
-                w.UpdateLabel("Writing files... (404.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (404.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\404.html", Stor.Page404);
-                w.UpdateLabel("Writing files... (ServerError.html)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (ServerError.html)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\ServerError.html", Stor.PageServerError);
 
-                w.UpdateLabel("Writing files... (Screenshots)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Screenshots)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS1.jpg", Stor.RenSS1);
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS2.jpg", Stor.RenSS2);
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS3.jpg", Stor.RenSS3);
@@ -514,16 +542,21 @@ namespace RenWeb
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS5.jpg", Stor.RenSS5);
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\RenSS6.jpg", Stor.RenSS6);
 
-                w.UpdateLabel("Writing files... (Team Logo)");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing files... (Team Logo)"));
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\teams\\GDI.png", Stor.LogoGDI);
                 File.WriteAllBytes(Main.RootHTTPFolder + "\\img\\teams\\Nod.png", Stor.LogoNod);
+                
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Writing extras... (Embedding)"));
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\ServerLogos\\EmbedFrame2.png", Stor.EmbedFrame);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\ServerLogos\\Icon16.png", Stor.RenIcon16);
+                File.WriteAllBytes(Main.RootHTTPFolder + "\\ExampleEmbed.embed", Stor.ExampleEmbed);
 
                 //Clearing all bytes.
-                w.UpdateLabel("Finalizing...");
+                SynchronizedInvoke.Invoke(w, () => w.UpdateLabel("Finalizing..."));
                 Thread.Sleep(150);
                 Stor.Dispose();
                 Stor = null;
-                w.Done();
+                SynchronizedInvoke.Invoke(w, () => w.Done());
             });
 
             tr.SetApartmentState(ApartmentState.STA);
@@ -570,6 +603,25 @@ namespace RenWeb
             }
 
             Server = new WebServer();
+        }
+    }
+
+    internal static class SynchronizedInvoke
+    {
+        /// <summary>
+        /// Invokes the specified action on the thread that the specified sync object was created on.
+        /// </summary>
+        public static void Invoke(ISynchronizeInvoke sync, Action action)
+        {
+            if (!sync.InvokeRequired)
+            {
+                action();
+            }
+            else
+            {
+                object[] args = new object[] { };
+                sync.Invoke(action, args);
+            }
         }
     }
 }
