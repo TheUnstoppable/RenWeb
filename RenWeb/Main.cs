@@ -459,8 +459,9 @@ namespace RenWeb
                 }
                 else
                 {
-                    Engine.ConsoleOutput("[RenWeb] FATAL ERROR! Failed to load RenWeb settings file. RenWeb.ini could not be found in " + ServerRoot + "\n");
-                    Engine.ConsoleInput("exit");
+                    Engine.ConsoleOutput("[RenWeb] FATAL ERROR! Failed to load RenWeb settings file. Attempting to register configuration file into DA...\n");
+                    DASettingsManager.AddSettings("RenWeb.ini");
+                    Engine.ConsoleInput("reload");
                 }
             }
         }
