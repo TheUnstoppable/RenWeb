@@ -6,7 +6,6 @@ using System.Text;
 using System.Net.Sockets;
 using System.IO;
 using RenSharp;
-using HtmlAgilityPack;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
